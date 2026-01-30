@@ -7,7 +7,8 @@
   "license": "MIT",
   "main": "dist/index.js",
   "bin": {
-    "lobs-mcp": "dist/index.js"
+    "lobs-mcp": "dist/index.js",
+    "lobs-bridge": "dist/bridgeCli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

@@ -5,6 +5,18 @@ MCP server that lets **Lobs/OpenClaw** talk to a local **Gmail+Google Calendar b
 - Gmail access is **read-only**.
 - Calendar access is **read+write** (writes should still be gated by human confirmation in the calling agent).
 
+## Sync contract (important)
+
+This repo contains **two layers** that must be kept in sync:
+
+1) **Bridge protocol** (methods + params + result shapes) — what the privileged “other user” service implements.
+2) **This MCP server + CLI wrappers** — what Lobs/OpenClaw calls.
+
+If you add/change a bridge method, you must update:
+- the MCP tool mapping in `src/index.ts`
+- the docs below
+- and (optionally) any local CLI conveniences
+
 ## Bridge protocol (UDS)
 
 The bridge is expected to listen on a Unix socket (default: `/run/gcal-bridge/bridge.sock`) and speak **newline-delimited JSON**.
@@ -47,6 +59,21 @@ npm start
 ```bash
 npm run dev
 ```
+
+## Convenience CLI (recommended)
+
+So you don’t have to remember socket paths or write ad-hoc test code, this repo also ships a tiny CLI that calls the **bridge** directly:
+
+```bash
+# after npm install && npm run build
+export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
+
+lobs-bridge ping
+lobs-bridge gmail.unread --params '{"max":10}'
+lobs-bridge calendar.upcoming --params '{"hours":48,"tz":"America/New_York"}'
+```
+
+This is intentionally “dumb”: it’s for quick manual testing that the bridge is alive and returning the expected shapes.
 
 ## Configuration
 
