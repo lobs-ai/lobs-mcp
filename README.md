@@ -49,10 +49,14 @@ npm run build
 
 ## Run
 
+One command build+run:
+
 ```bash
 export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
-npm start
+npm run start:mcp
 ```
+
+(If you already built it and just want to run the compiled server: `npm start`.)
 
 ## Dev
 
