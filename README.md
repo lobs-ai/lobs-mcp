@@ -19,7 +19,7 @@ If you add/change a bridge method, you must update:
 
 ## Bridge protocol (UDS)
 
-The bridge is expected to listen on a Unix socket (default: `/tmp/gcal-bridge.sock`) and speak **newline-delimited JSON**.
+The bridge is expected to listen on a Unix socket (default: `./.run/bridge.sock`) and speak **newline-delimited JSON**.
 
 Request:
 ```json
@@ -150,7 +150,7 @@ To discover calendar IDs, use the new MCP tool `calendar_list` (or bridge method
 ## Configuration
 
 Defaults:
-- socket: `/tmp/gcal-bridge.sock`
+- socket: `./.run/bridge.sock` (repo-local)
 
 Override (optional):
 - `LOBS_BRIDGE_SOCKET`
