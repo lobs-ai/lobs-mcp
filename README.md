@@ -64,9 +64,11 @@ export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
 npm run dev
 ```
 
-## Convenience CLI (recommended)
+## Convenience CLIs (recommended)
 
-So you don’t have to remember socket paths or write ad-hoc test code, this repo also ships a tiny CLI that calls the **bridge** directly:
+### 1) `lobs-bridge` (Node CLI)
+
+So you don’t have to remember socket paths or write ad-hoc test code, this repo ships a tiny CLI that calls the **bridge** directly:
 
 ```bash
 # after npm install && npm run build
@@ -75,6 +77,16 @@ export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
 lobs-bridge ping
 lobs-bridge gmail.unread --params '{"max":10}'
 lobs-bridge calendar.upcoming --params '{"hours":48,"tz":"America/New_York"}'
+```
+
+### 2) `./bin/bridge-call` (bash + socat)
+
+If you want a dead-simple shell way to send one request and block until a response:
+
+```bash
+export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
+./bin/bridge-call ping
+./bin/bridge-call gmail.unread '{"max":10}'
 ```
 
 This is intentionally “dumb”: it’s for quick manual testing that the bridge is alive and returning the expected shapes.
