@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run the Google bridge as the dedicated user.
+# Usage:
+#   ./bin/run-bridge-mcpuser
+#   LOBS_BRIDGE_HTTP_URL=http://127.0.0.1:17381 ./bin/run-bridge-mcpuser
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# If you want a different user, override:
+BRIDGE_USER="${LOBS_BRIDGE_RUN_AS:-mcpuser}"
+
+# Pass through config env vars. Default is localhost-only.
+: "${LOBS_BRIDGE_HTTP_URL:=http://127.0.0.1:17381}"
+: "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
+: "${LOBS_BRIDGE_AUTH_TOKEN:=}"
+
+exec sudo -u "$BRIDGE_USER" -H bash -lc "
+  set -euo pipefail
+  cd \"$ROOT_DIR\"
+  export LOBS_BRIDGE_HTTP_URL=\"$LOBS_BRIDGE_HTTP_URL\"
+  export LOBS_BRIDGE_TIMEOUT_MS=\"$LOBS_BRIDGE_TIMEOUT_MS\"
+  ${LOBS_BRIDGE_AUTH_TOKEN:+export LOBS_BRIDGE_AUTH_TOKEN=\"$LOBS_BRIDGE_AUTH_TOKEN\"}
+  exec ./bin/start-bridge-http
+"

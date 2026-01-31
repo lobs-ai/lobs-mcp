@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+# Load config (LOBS_BRIDGE_HTTP_URL, etc.)
+# shellcheck disable=SC1091
+source "$ROOT_DIR/bin/_env.sh"
+
+# Ensure deps are installed (tsc lives in node_modules/.bin)
+if [ ! -x "node_modules/.bin/tsc" ]; then
+  echo "[bridge-http] Installing dependencies..." >&2
+  npm install >&2
+fi
+
+npm run -s build >/dev/null
+
+: "${LOBS_BRIDGE_HTTP_URL:=http://127.0.0.1:17381}"
+
+echo "[bridge-http] starting HTTP bridge at $LOBS_BRIDGE_HTTP_URL" >&2
+exec node dist/bridgeHost.js
