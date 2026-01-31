@@ -3,7 +3,7 @@
 MCP server that lets **Lobs/OpenClaw** talk to a local **Gmail+Google Calendar bridge** over a **Unix domain socket**.
 
 - Gmail access is **read-only**.
-- Calendar access is **read+write** (writes should still be gated by human confirmation in the calling agent).
+- Calendar access is **read by default**, with **per-calendar write allowlisting** enforced by the bridge.
 
 ## Sync contract (important)
 
@@ -121,7 +121,7 @@ This writes:
 - `~/.config/lobs-mcp/google-token.json`
 
 Scopes:
-- Calendar: read+write (API scope)
+- Calendar: read+write **API scope** (Google scopes aren’t per-calendar; we enforce RO/RW locally via `calendar-acl.json`)
 - Gmail: read + mark read/unread (NO send)
 
 3) Calendar access control (RW vs RO)
@@ -129,7 +129,7 @@ Scopes:
 The bridge enforces per-calendar permissions via:
 - `~/.config/lobs-mcp/calendar-acl.json`
 
-Example (default read-only; primary writable):
+Example (default read-only; explicitly allow write only where you want it):
 ```json
 {
   "default": "read",
@@ -138,6 +138,11 @@ Example (default read-only; primary writable):
     "someone@group.calendar.google.com": "read"
   }
 }
+```
+
+If the file is missing, the safe fallback is effectively:
+```json
+{ "default": "read", "calendars": {} }
 ```
 
 To discover calendar IDs, use the new MCP tool `calendar_list` (or bridge method `calendar.list`).

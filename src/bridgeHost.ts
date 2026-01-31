@@ -5,7 +5,11 @@ import path from "node:path";
 
 import type { BridgeRequest, BridgeResponse } from "./udsClient.js";
 import { loadConfig } from "./config.js";
-import { loadCalendarAcl, requireCalendarPerm } from "./calendarAcl.js";
+import {
+  loadCalendarAcl,
+  permForCalendar,
+  requireCalendarPerm,
+} from "./calendarAcl.js";
 
 type Handler = (params: any) => Promise<any> | any;
 
@@ -91,8 +95,16 @@ const handlers: Record<string, Handler> = {
 
   // Calendar
   "calendar.list": async () => {
-    // List available calendars (always read-level operation)
-    return await withGoogle((auth) => calendarList(auth));
+    // List available calendars (always read-level operation).
+    // We also annotate each entry with the *enforced* permission from the local ACL.
+    const items = await withGoogle((auth) => calendarList(auth));
+    return items.map((c: any) => {
+      const id = String(c?.id ?? "");
+      return {
+        ...c,
+        lobsPerm: id ? permForCalendar(CAL_ACL, id) : CAL_ACL.default ?? "read",
+      };
+    });
   },
   "calendar.upcoming": async (params: any) => {
     const hours = Number(params?.hours ?? 72);

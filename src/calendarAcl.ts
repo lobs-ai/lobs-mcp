@@ -22,8 +22,9 @@ export function loadCalendarAcl(): CalendarAcl {
     const raw = fs.readFileSync(p, "utf8");
     return JSON.parse(raw) as CalendarAcl;
   } catch {
-    // Easy mode: allow read everywhere, write nowhere unless allowed explicitly.
-    return { default: "read", calendars: { primary: "write" } };
+    // Safe default: allow read everywhere, write nowhere unless explicitly allowed.
+    // (This supports “read-only calendars” even though Google OAuth scopes aren’t per-calendar.)
+    return { default: "read", calendars: {} };
   }
 }
 
