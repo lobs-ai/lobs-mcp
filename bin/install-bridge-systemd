@@ -32,8 +32,8 @@ sudo usermod -aG "$SHARED_GROUP" rafe
 sudo usermod -aG "$SHARED_GROUP" "$BRIDGE_USER"
 
 echo "[lobs-mcp] Repo location" >&2
-echo "  This service template expects the bridge code at: /home/rafe/lobs-mcp" >&2
-echo "  Ensure $BRIDGE_USER can read that directory, OR copy the repo elsewhere and update the unit." >&2
+echo "  This service template expects the bridge code at: /home/$BRIDGE_USER/lobs-mcp" >&2
+echo "  (You said you already keep a copy there.)" >&2
 
 echo "[lobs-mcp] Installing systemd unit: $SERVICE_DST" >&2
 sudo install -m 0644 "$SERVICE_SRC" "$SERVICE_DST"

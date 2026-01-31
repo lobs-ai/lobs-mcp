@@ -24,16 +24,16 @@ RuntimeDirectory=lobs-mcp
 RuntimeDirectoryMode=0770
 
 # Bridge code location:
-# By default we assume the repo is checked out at /home/rafe/lobs-mcp and is readable by `mpcuser`.
-# If you prefer to copy the repo into /home/mpcuser/lobs-mcp, update these paths.
-WorkingDirectory=/home/rafe/lobs-mcp
+# Since this service runs as `mpcuser`, the simplest approach is: keep a copy of the repo in
+#   /home/mpcuser/lobs-mcp
+WorkingDirectory=%h/lobs-mcp
 
 Environment=LOBS_BRIDGE_SOCKET=/run/lobs-mcp/bridge.sock
 Environment=LOBS_BRIDGE_TIMEOUT_MS=15000
 Environment=LOBS_BRIDGE_LOG_LEVEL=info
 Environment=LOBS_BRIDGE_SOCKET_MODE=0660
 
-ExecStart=/home/rafe/lobs-mcp/bin/start-bridge
+ExecStart=%h/lobs-mcp/bin/start-bridge
 Restart=on-failure
 RestartSec=1
 
