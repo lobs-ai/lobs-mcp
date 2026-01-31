@@ -19,6 +19,7 @@ Environment=LOBS_BRIDGE_TIMEOUT_MS=15000
 Environment=LOBS_BRIDGE_LOG_LEVEL=info
 Environment=LOBS_BRIDGE_SOCKET_MODE=0666
 ExecStart=%h/lobs-mcp/bin/start-bridge
+# (start-bridge is build-smart; it won't rebuild unless dist is missing or LOBS_FORCE_BUILD=1)
 Restart=always
 RestartSec=1
 

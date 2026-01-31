@@ -14,5 +14,10 @@ if [ ! -x "node_modules/.bin/tsc" ]; then
   npm install >&2
 fi
 
-npm run -s build
+# Avoid rebuilding on every start (especially under systemd).
+# Build only if dist is missing or LOBS_FORCE_BUILD=1.
+if [ "${LOBS_FORCE_BUILD:-}" = "1" ] || [ ! -f "dist/bridgeHost.js" ]; then
+  npm run -s build
+fi
+
 exec node dist/bridgeHost.js
