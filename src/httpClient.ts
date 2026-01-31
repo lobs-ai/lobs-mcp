@@ -22,6 +22,30 @@ export class HttpBridgeClient {
     this.baseUrl = this.baseUrl.replace(/\/+$/, "");
   }
 
+  async health(): Promise<any> {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), this.timeoutMs);
+
+    try {
+      const res = await fetch(`${this.baseUrl}/health`, {
+        method: "GET",
+        headers: {
+          ...(this.authToken ? { authorization: `Bearer ${this.authToken}` } : {}),
+        },
+        signal: ac.signal,
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} from bridge: ${body || res.statusText}`);
+      }
+
+      return await res.json();
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
   async call(method: string, params?: any): Promise<any> {
     const req: BridgeRequest = { id: crypto.randomUUID(), method, params };
 

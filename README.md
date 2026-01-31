@@ -70,16 +70,22 @@ npm run dev
 
 ### 1) `lobs-bridge` (Node CLI)
 
-A small CLI that calls the **localhost HTTP bridge** directly (so you don’t have to remember URLs or write ad-hoc test code):
+A small CLI that calls the **localhost HTTP bridge** directly (so you don’t have to remember URLs or write ad-hoc test code).
 
 ```bash
 # after npm install && npm run build
 lobs-bridge ping
+lobs-bridge health
 lobs-bridge gmail-unread --max 10
 lobs-bridge gmail-search "is:unread newer_than:7d" --max 20
 lobs-bridge calendar-upcoming --hours 48 --tz "America/New_York"
 lobs-bridge calendar-list
 ```
+
+Nice ergonomics:
+- global overrides: `--url`, `--timeout-ms`, `--token`
+- JSON input can be inline, from a file (`@event.json`), or stdin (`-`)
+- `--json` for pretty JSON output
 
 If you need to hit an arbitrary bridge method:
 
