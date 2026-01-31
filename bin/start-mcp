@@ -17,42 +17,26 @@ fi
 # Build then run MCP server over stdio.
 # (MCP clients spawn this and communicate via stdin/stdout.)
 
-SOCKET_PATH="$LOBS_BRIDGE_SOCKET"
-
-wait_for_socket() {
-  local sock="$1"
-  local timeout_ms="${2:-5000}"
+wait_for_http() {
+  local url="$1"
+  local timeout_s="${2:-5}"
   local start
-  start=$(date +%s%3N 2>/dev/null || python3 - <<'PY'
-import time
-print(int(time.time()*1000))
-PY
-)
+  start=$(date +%s)
 
   while true; do
-    if [ -S "$sock" ]; then
+    if command -v curl >/dev/null 2>&1 && curl -fsS "$url/health" >/dev/null 2>&1; then
       return 0
     fi
     local now
-    now=$(date +%s%3N 2>/dev/null || python3 - <<'PY'
-import time
-print(int(time.time()*1000))
-PY
-)
-    if (( now - start >= timeout_ms )); then
+    now=$(date +%s)
+    if (( now - start >= timeout_s )); then
       return 1
     fi
-    sleep 0.1
+    sleep 0.2
   done
 }
 
 maybe_start_bridge() {
-  local sock="$1"
-
-  if [ -S "$sock" ]; then
-    return 0
-  fi
-
   # Try to start a systemd *system* service if available.
   local unit="${LOBS_BRIDGE_SYSTEMD_UNIT:-gcal-bridge.service}"
   if command -v systemctl >/dev/null 2>&1; then
@@ -74,21 +58,22 @@ maybe_start_bridge() {
   return 0
 }
 
-maybe_start_bridge "$SOCKET_PATH"
+maybe_start_bridge
 
-if ! wait_for_socket "$SOCKET_PATH" 5000; then
-  cat >&2 <<EOF
-[lobs-mcp] Bridge socket not available: $SOCKET_PATH
+if [ "${LOBS_BRIDGE_TRANSPORT:-http}" = "http" ]; then
+  if ! wait_for_http "$LOBS_BRIDGE_HTTP_URL" 5; then
+    cat >&2 <<EOF
+[lobs-mcp] Bridge HTTP not available: $LOBS_BRIDGE_HTTP_URL
 
 Tried:
   - sudo systemctl start ${LOBS_BRIDGE_SYSTEMD_UNIT:-gcal-bridge.service}
   - sudo -u <user> $ROOT_DIR/bin/start-bridge   (set LOBS_BRIDGE_RUN_AS)
 
 Fix:
-  - Ensure the bridge daemon is running and creates that socket.
-  - Or set LOBS_BRIDGE_RUN_AS to the privileged user.
+  - Ensure the bridge daemon is running and listening on that URL.
 EOF
-  exit 1
+    exit 1
+  fi
 fi
 
 npm run -s build

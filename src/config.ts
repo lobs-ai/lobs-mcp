@@ -3,7 +3,18 @@ import path from "node:path";
 import os from "node:os";
 
 export type LobsConfig = {
+  /** Bridge transport selection. */
+  bridgeTransport: "http" | "uds";
+
+  /** UDS socket path (used when bridgeTransport="uds"). */
   socketPath: string;
+
+  /** HTTP base URL (used when bridgeTransport="http"). */
+  httpUrl: string;
+
+  /** Optional bearer token for HTTP bridge. */
+  authToken?: string;
+
   timeoutMs: number;
 };
 
@@ -43,11 +54,18 @@ export function loadConfig(): LobsConfig {
   const configEnvPath = path.join(xdg, "lobs-mcp", "config.env");
   const userEnv = readOptionalEnvFile(configEnvPath);
 
+  const httpUrl =
+    process.env.LOBS_BRIDGE_HTTP_URL ??
+    repoEnv.LOBS_BRIDGE_HTTP_URL ??
+    userEnv.LOBS_BRIDGE_HTTP_URL ??
+    // Default to localhost HTTP to avoid cross-user UDS permission issues.
+    "http://127.0.0.1:17381";
+
   const socketPath =
     process.env.LOBS_BRIDGE_SOCKET ??
     repoEnv.LOBS_BRIDGE_SOCKET ??
     userEnv.LOBS_BRIDGE_SOCKET ??
-    // Default to a shared runtime socket so the bridge can run under a separate user.
+    // Default UDS path if you opt into UDS.
     "/run/lobs-mcp/bridge.sock";
 
   const timeoutMsRaw =
@@ -56,10 +74,25 @@ export function loadConfig(): LobsConfig {
     userEnv.LOBS_BRIDGE_TIMEOUT_MS ??
     "15000";
 
+  const authToken =
+    process.env.LOBS_BRIDGE_AUTH_TOKEN ??
+    repoEnv.LOBS_BRIDGE_AUTH_TOKEN ??
+    userEnv.LOBS_BRIDGE_AUTH_TOKEN ??
+    undefined;
+
   const timeoutMs = Number(timeoutMsRaw);
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new Error(`Invalid LOBS_BRIDGE_TIMEOUT_MS: ${timeoutMsRaw}`);
   }
 
-  return { socketPath, timeoutMs };
+  // Prefer explicit env selection; otherwise default to HTTP.
+  const bridgeTransport: LobsConfig["bridgeTransport"] =
+    (process.env.LOBS_BRIDGE_TRANSPORT as any) ??
+    (repoEnv.LOBS_BRIDGE_TRANSPORT as any) ??
+    (userEnv.LOBS_BRIDGE_TRANSPORT as any) ??
+    (process.env.LOBS_BRIDGE_SOCKET || repoEnv.LOBS_BRIDGE_SOCKET || userEnv.LOBS_BRIDGE_SOCKET
+      ? "uds"
+      : "http");
+
+  return { bridgeTransport, socketPath, httpUrl, authToken, timeoutMs };
 }

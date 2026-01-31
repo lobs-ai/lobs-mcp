@@ -1,9 +1,6 @@
 #!/usr/bin/env node
-import fs from "node:fs";
-import net from "node:net";
-import path from "node:path";
+import http from "node:http";
 
-import type { BridgeRequest, BridgeResponse } from "./udsClient.js";
 import { loadConfig } from "./config.js";
 import {
   loadCalendarAcl,
@@ -14,6 +11,11 @@ import {
 type Handler = (params: any) => Promise<any> | any;
 
 type LogLevel = "silent" | "error" | "info" | "debug";
+
+type BridgeRequest = { id: string; method: string; params?: any };
+type BridgeResponse =
+  | { id: string; ok: true; result: any }
+  | { id: string; ok: false; error: { code: string; message: string } };
 
 const LOG_LEVEL = (process.env.LOBS_BRIDGE_LOG_LEVEL ?? "info") as LogLevel;
 
@@ -45,17 +47,13 @@ function logError(msg: string, meta?: any) {
   console.error(`[gcal-bridge][error] ${msg}`, meta ?? "");
 }
 
-function parseMode(mode: string | undefined, fallback: number): number {
-  if (!mode) return fallback;
-  // Accept "666", "0666", "0o666"
-  const m = mode.startsWith("0o") ? mode.slice(2) : mode;
-  const n = Number.parseInt(m, 8);
-  return Number.isFinite(n) ? n : fallback;
-}
-
 const cfg = loadConfig();
-const SOCKET_PATH = cfg.socketPath;
-const SOCKET_MODE = parseMode(process.env.LOBS_BRIDGE_SOCKET_MODE, 0o666);
+const BASE_URL = cfg.httpUrl;
+const url = new URL(BASE_URL);
+const HOST = url.hostname || "127.0.0.1";
+const PORT = Number(url.port || "80");
+const AUTH_TOKEN = cfg.authToken;
+
 const CAL_ACL = loadCalendarAcl();
 
 // Google backend
@@ -70,8 +68,8 @@ import {
 } from "./google/calendar.js";
 
 async function withGoogle<T>(fn: (auth: any) => Promise<T>): Promise<T> {
-  const cfg = defaultGoogleAuthConfig();
-  const auth = await getAuthedGoogleClient(cfg);
+  const gcfg = defaultGoogleAuthConfig();
+  const auth = await getAuthedGoogleClient(gcfg);
   return await fn(auth);
 }
 
@@ -95,8 +93,6 @@ const handlers: Record<string, Handler> = {
 
   // Calendar
   "calendar.list": async () => {
-    // List available calendars (always read-level operation).
-    // We also annotate each entry with the *enforced* permission from the local ACL.
     const items = await withGoogle((auth) => calendarList(auth));
     return items.map((c: any) => {
       const id = String(c?.id ?? "");
@@ -134,113 +130,97 @@ const handlers: Record<string, Handler> = {
   },
 };
 
-function safeUnlinkSocket(p: string) {
-  try {
-    const st = fs.lstatSync(p);
-    if (st.isSocket()) fs.unlinkSync(p);
-  } catch {
-    // ignore
-  }
-}
-
-function ensureParentDir(p: string) {
-  const dir = path.dirname(p);
-  fs.mkdirSync(dir, { recursive: true });
-}
-
 function encodeError(err: any): { code: string; message: string } {
   const code = String(err?.code ?? "INTERNAL_ERROR");
   const message = String(err?.message ?? String(err));
   return { code, message };
 }
 
-function handleLine(line: string): Promise<string> {
-  let req: BridgeRequest;
-  try {
-    req = JSON.parse(line) as BridgeRequest;
-  } catch {
-    const res: BridgeResponse = {
-      id: "?",
-      ok: false,
-      error: { code: "INVALID_JSON", message: "Invalid JSON" },
-    };
-    logError("invalid json", { line: line.slice(0, 500) });
-    return Promise.resolve(JSON.stringify(res));
+async function readJson(req: http.IncomingMessage, maxBytes = 1_000_000): Promise<any> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buf.length;
+    if (total > maxBytes) throw Object.assign(new Error("Request too large"), { code: "REQUEST_TOO_LARGE" });
+    chunks.push(buf);
   }
+  const raw = Buffer.concat(chunks).toString("utf8");
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    throw Object.assign(new Error("Invalid JSON"), { code: "INVALID_JSON" });
+  }
+}
 
-  const id = String(req.id ?? "?");
-  const method = String(req.method ?? "");
+function checkAuth(req: http.IncomingMessage): boolean {
+  if (!AUTH_TOKEN) return true;
+  const h = String(req.headers["authorization"] ?? "");
+  return h === `Bearer ${AUTH_TOKEN}`;
+}
+
+async function handleCall(body: any): Promise<BridgeResponse> {
+  const req = body as BridgeRequest;
+  const id = String(req?.id ?? "?");
+  const method = String(req?.method ?? "");
+
   const handler = handlers[method];
-
   if (!handler) {
-    const res: BridgeResponse = {
+    return {
       id,
       ok: false,
       error: { code: "METHOD_NOT_FOUND", message: `Unknown method: ${method}` },
     };
-    logInfo("method not found", { id, method });
-    return Promise.resolve(JSON.stringify(res));
   }
 
   const started = Date.now();
   logDebug("request", { id, method });
 
-  return Promise.resolve()
-    .then(() => handler(req.params))
-    .then((result) => {
-      const ms = Date.now() - started;
-      logInfo("ok", { id, method, ms });
-      const res: BridgeResponse = { id, ok: true, result };
-      return JSON.stringify(res);
-    })
-    .catch((err) => {
-      const ms = Date.now() - started;
-      const e = encodeError(err);
-      logError("error", { id, method, ms, error: e });
-      const res: BridgeResponse = { id, ok: false, error: e };
-      return JSON.stringify(res);
-    });
+  try {
+    const result = await handler(req.params);
+    const ms = Date.now() - started;
+    logInfo("ok", { id, method, ms });
+    return { id, ok: true, result };
+  } catch (err: any) {
+    const ms = Date.now() - started;
+    const e = encodeError(err);
+    logError("error", { id, method, ms, error: e });
+    return { id, ok: false, error: e };
+  }
 }
 
 async function main() {
-  logInfo("starting", { socket: SOCKET_PATH, logLevel: LOG_LEVEL });
+  logInfo("starting", { httpUrl: BASE_URL, logLevel: LOG_LEVEL, auth: AUTH_TOKEN ? "bearer" : "none" });
 
-  ensureParentDir(SOCKET_PATH);
-  safeUnlinkSocket(SOCKET_PATH);
-
-  const server = net.createServer((socket) => {
-    const remote = `${socket.remoteAddress ?? "local"}`;
-    logInfo("client connected", { remote });
-
-    socket.setEncoding("utf8");
-    let buffer = "";
-
-    socket.on("error", (err) => {
-      logError("client socket error", { remote, err: String(err) });
-    });
-
-    socket.on("end", () => {
-      logInfo("client disconnected", { remote });
-    });
-
-    socket.on("data", (chunk) => {
-      buffer += chunk;
-      while (true) {
-        const idx = buffer.indexOf("\n");
-        if (idx === -1) break;
-        const line = buffer.slice(0, idx).trim();
-        buffer = buffer.slice(idx + 1);
-        if (!line) continue;
-
-        handleLine(line)
-          .then((outLine) => {
-            socket.write(outLine + "\n");
-          })
-          .catch((err) => {
-            logError("failed to handle line", { err: String(err) });
-          });
+  const server = http.createServer(async (req, res) => {
+    try {
+      if (req.url === "/health") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+        return;
       }
-    });
+
+      if (req.method === "POST" && req.url === "/call") {
+        if (!checkAuth(req)) {
+          res.writeHead(401, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "unauthorized" }));
+          return;
+        }
+
+        const body = await readJson(req);
+        const out = await handleCall(body);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(out));
+        return;
+      }
+
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "not_found" }));
+    } catch (err: any) {
+      const e = encodeError(err);
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: e }));
+    }
   });
 
   server.on("error", (err) => {
@@ -248,17 +228,8 @@ async function main() {
     process.exit(1);
   });
 
-  server.listen(SOCKET_PATH, () => {
-    try {
-      fs.chmodSync(SOCKET_PATH, SOCKET_MODE);
-    } catch {
-      // ignore
-    }
-
-    logInfo("listening", {
-      socket: SOCKET_PATH,
-      mode: SOCKET_MODE.toString(8),
-    });
+  server.listen(PORT, HOST, () => {
+    logInfo("listening", { httpUrl: BASE_URL });
   });
 
   const shutdown = (signal: string) => {
@@ -268,7 +239,6 @@ async function main() {
     } catch {
       // ignore
     }
-    safeUnlinkSocket(SOCKET_PATH);
     process.exit(0);
   };
 

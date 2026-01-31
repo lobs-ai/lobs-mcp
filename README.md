@@ -1,6 +1,6 @@
 # lobs-mcp
 
-MCP server that lets **Lobs/OpenClaw** talk to a local **Gmail+Google Calendar bridge** over a **Unix domain socket**.
+MCP server that lets **Lobs/OpenClaw** talk to a local **Gmail+Google Calendar bridge** over **localhost HTTP** (default), or optionally a **Unix domain socket**.
 
 - Gmail access is **read-only**.
 - Calendar access is **read by default**, with **per-calendar write allowlisting** enforced by the bridge.
@@ -17,9 +17,16 @@ If you add/change a bridge method, you must update:
 - the docs below
 - and (optionally) any local CLI conveniences
 
-## Bridge protocol (UDS)
+## Bridge protocol (HTTP, default)
 
-The bridge is expected to listen on a Unix socket (default: `/run/lobs-mcp/bridge.sock`) and speak **newline-delimited JSON**.
+The bridge listens on **localhost HTTP** (default: `http://127.0.0.1:17381`) and speaks JSON.
+
+- `GET /health` → `{ ok: true }`
+- `POST /call` with `{ id, method, params }` → `{ id, ok, result | error }`
+
+## Bridge protocol (UDS, optional)
+
+If you opt into UDS, the bridge listens on a Unix socket (default: `/run/lobs-mcp/bridge.sock`) and speaks **newline-delimited JSON**.
 
 Request:
 ```json
@@ -150,13 +157,12 @@ To discover calendar IDs, use the new MCP tool `calendar_list` (or bridge method
 ## Configuration
 
 Defaults:
-- socket: `/run/lobs-mcp/bridge.sock` (shared runtime; works with a separate bridge user)
+- HTTP: `http://127.0.0.1:17381`
 
 ### Separate bridge user
-If you run the bridge under another user (e.g. `mpcuser`), the bridge service must be able to read the bridge code (this repo) and the Google credential/token files for that user. The recommended pattern is:
-- Bridge runs as `mpcuser` via **system** systemd service
-- Socket lives at `/run/lobs-mcp/bridge.sock` with group `lobs-mcp` and mode `0660`
-- `rafe` is in group `lobs-mcp` so the MCP server can connect
+For the “bridge runs as another user” case, HTTP is the easiest option (no Unix-socket permission headaches).
+- Bridge runs as `mcpuser` via systemd and binds to `127.0.0.1` only
+- MCP server runs as `rafe` and talks to `http://127.0.0.1:17381`
 
 
 Override (optional):

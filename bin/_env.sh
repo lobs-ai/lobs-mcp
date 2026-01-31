@@ -24,8 +24,12 @@ if [ -f "$ROOT_DIR/.env" ]; then
   set +a
 fi
 
+: "${LOBS_BRIDGE_TRANSPORT:=http}"
+: "${LOBS_BRIDGE_HTTP_URL:=http://127.0.0.1:17381}"
 : "${LOBS_BRIDGE_SOCKET:=/run/lobs-mcp/bridge.sock}"
 : "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
 
+export LOBS_BRIDGE_TRANSPORT
+export LOBS_BRIDGE_HTTP_URL
 export LOBS_BRIDGE_SOCKET
 export LOBS_BRIDGE_TIMEOUT_MS

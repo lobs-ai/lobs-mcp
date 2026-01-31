@@ -6,10 +6,14 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { UdsBridgeClient } from "./udsClient.js";
+import { HttpBridgeClient } from "./httpClient.js";
 import { loadConfig } from "./config.js";
 
 const cfg = loadConfig();
-const bridge = new UdsBridgeClient(cfg.socketPath, cfg.timeoutMs);
+const bridge =
+  cfg.bridgeTransport === "uds"
+    ? new UdsBridgeClient(cfg.socketPath, cfg.timeoutMs)
+    : new HttpBridgeClient(cfg.httpUrl, cfg.timeoutMs, cfg.authToken);
 
 const server = new Server(
   {
