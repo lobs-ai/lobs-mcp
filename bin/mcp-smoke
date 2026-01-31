@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+# Load config like the other scripts
+# shellcheck disable=SC1091
+source "$ROOT_DIR/bin/_env.sh"
+
+npm run -s build >/dev/null
+
+node --input-type=module <<'JS'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+const env = { ...process.env };
+
+const transport = new StdioClientTransport({
+  command: 'node',
+  args: ['dist/index.js'],
+  env,
+});
+
+const client = new Client({ name: 'lobs-mcp-smoke', version: '0.0.0' });
+await client.connect(transport);
+
+const tools = await client.listTools();
+console.log('TOOLS:', tools.tools.map(t => t.name).join(', '));
+
+const ping = await client.callTool({ name: 'bridge_ping', arguments: {} });
+console.log('PING:', ping);
+
+const cal = await client.callTool({ name: 'calendar_list', arguments: {} });
+console.log('CALENDAR_LIST (first 1k chars):', JSON.stringify(cal).slice(0, 1000));
+
+await client.close();
+JS
