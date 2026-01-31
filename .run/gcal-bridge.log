@@ -1,2 +1,0 @@
-[gcal-bridge] starting { socket: '/tmp/gcal-bridge.sock', logLevel: 'debug' }
-[gcal-bridge] listening { socket: '/tmp/gcal-bridge.sock', mode: '666' }
