@@ -19,7 +19,7 @@ If you add/change a bridge method, you must update:
 
 ## Bridge protocol (UDS)
 
-The bridge is expected to listen on a Unix socket (default: `/run/gcal-bridge/bridge.sock`) and speak **newline-delimited JSON**.
+The bridge is expected to listen on a Unix socket (default: `./.run/bridge.sock` in this repo) and speak **newline-delimited JSON**.
 
 Request:
 ```json
@@ -71,8 +71,6 @@ So you don’t have to remember socket paths or write ad-hoc test code, this rep
 
 ```bash
 # after npm install && npm run build
-export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
-
 lobs-bridge ping
 lobs-bridge gmail.unread --params '{"max":10}'
 lobs-bridge calendar.upcoming --params '{"hours":48,"tz":"America/New_York"}'
@@ -94,9 +92,12 @@ This is intentionally “dumb”: it’s for quick manual testing that the bridg
 By default, the tools are **standalone** (no `export ...` needed). Configure once:
 
 ```bash
-./bin/configure --socket /run/gcal-bridge/bridge.sock
-# optional:
-# ./bin/configure --socket /run/gcal-bridge/bridge.sock --timeout-ms 15000
+# default is repo-local:
+#   /home/rafe/lobs-mcp/.run/bridge.sock
+# so you can often skip this entirely.
+#
+# If your bridge uses a different socket path, set it once:
+./bin/configure --socket /some/other/path.sock
 ```
 
 This writes:

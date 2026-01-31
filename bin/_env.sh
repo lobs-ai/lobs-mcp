@@ -24,7 +24,7 @@ if [ -f "$CONF_FILE" ]; then
   set +a
 fi
 
-: "${LOBS_BRIDGE_SOCKET:=/run/gcal-bridge/bridge.sock}"
+: "${LOBS_BRIDGE_SOCKET:=$ROOT_DIR/.run/bridge.sock}"
 : "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
 
 export LOBS_BRIDGE_SOCKET

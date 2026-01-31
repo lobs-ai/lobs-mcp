@@ -47,7 +47,7 @@ export function loadConfig(): LobsConfig {
     process.env.LOBS_BRIDGE_SOCKET ??
     repoEnv.LOBS_BRIDGE_SOCKET ??
     userEnv.LOBS_BRIDGE_SOCKET ??
-    "/run/gcal-bridge/bridge.sock";
+    path.resolve(process.cwd(), ".run/bridge.sock");
 
   const timeoutMsRaw =
     process.env.LOBS_BRIDGE_TIMEOUT_MS ??
