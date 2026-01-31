@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Installs always-on services:
+#  1) HTTP bridge as a *system* service running as mcpuser (requires sudo)
+#  2) OPTIONAL MCP stdio server as a *user* service for rafe (not generally needed)
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+echo "[install-always-on] Installing lobs-bridge-http system service (mcpuser)" >&2
+sudo install -m 0644 "$ROOT_DIR/systemd/lobs-bridge-http.service" /etc/systemd/system/lobs-bridge-http.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now lobs-bridge-http.service
+
+cat >&2 <<'EOF'
+[install-always-on] Bridge is enabled.
+Logs:
+  sudo journalctl -u lobs-bridge-http.service -f
+EOF
+
+# Optional user service for MCP itself.
+if [ "${LOBS_INSTALL_MCP_USER_SERVICE:-}" = "1" ]; then
+  echo "[install-always-on] Installing OPTIONAL lobs-mcp user service (rafe)" >&2
+  mkdir -p "$HOME/.config/systemd/user"
+  cp "$ROOT_DIR/systemd/lobs-mcp-rafe.user.service" "$HOME/.config/systemd/user/lobs-mcp.service"
+  systemctl --user daemon-reload
+  systemctl --user enable --now lobs-mcp.service
+  echo "[install-always-on] lobs-mcp user service enabled" >&2
+fi

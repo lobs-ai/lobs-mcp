@@ -1,0 +1,25 @@
+[Unit]
+Description=Lobs Google bridge (HTTP on localhost)
+After=network.target
+
+[Service]
+Type=simple
+
+# Run the privileged Google bridge under a dedicated user.
+User=mcpuser
+
+# Repo location for the bridge user.
+WorkingDirectory=/home/mcpuser/lobs-mcp
+
+# Bind to localhost only (internal-only).
+Environment=LOBS_BRIDGE_HTTP_URL=http://127.0.0.1:17381
+Environment=LOBS_BRIDGE_TIMEOUT_MS=15000
+# Optional shared secret (recommended). Uncomment + set in /etc/systemd/system/lobs-bridge-http.service.d/override.conf
+# Environment=LOBS_BRIDGE_AUTH_TOKEN=... 
+
+ExecStart=/home/mcpuser/lobs-mcp/bin/start-bridge-http
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=lobs-mcp (MCP stdio server) placeholder user unit
+
+# NOTE: Most MCP clients spawn the MCP server on-demand over stdio.
+# Keeping an MCP server "always running" is usually unnecessary.
+# This unit is provided only if you want a persistent instance for debugging.
+
+[Service]
+Type=simple
+WorkingDirectory=%h/lobs-mcp
+Environment=LOBS_BRIDGE_HTTP_URL=http://127.0.0.1:17381
+ExecStart=%h/lobs-mcp/bin/start-mcp
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=default.target
