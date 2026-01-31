@@ -93,10 +93,11 @@ fi
 
 echo "[lobs-up] Bridge ready: $SOCKET_PATH" >&2
 
-# Start MCP server (stdio). In most setups your MCP client spawns this.
-# If you run it manually, this will exec and take over the terminal.
-if [ "${LOBS_UP_NO_MCP:-}" = "1" ]; then
-  echo "[lobs-up] LOBS_UP_NO_MCP=1 set; not starting MCP server." >&2
+# By default, bin/up only ensures the bridge is alive + the socket is ready.
+# MCP servers are usually spawned by the MCP client over stdio.
+#
+# To start MCP manually (foreground), set LOBS_UP_WITH_MCP=1.
+if [ "${LOBS_UP_WITH_MCP:-}" != "1" ]; then
   echo "[lobs-up] Bridge is ready at: $SOCKET_PATH" >&2
   exit 0
 fi

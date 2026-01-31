@@ -52,40 +52,62 @@ const cfg = loadConfig();
 const SOCKET_PATH = cfg.socketPath;
 const SOCKET_MODE = parseMode(process.env.LOBS_BRIDGE_SOCKET_MODE, 0o666);
 
-// Minimal handlers so end-to-end wiring can be validated.
-// Replace these with real Gmail/Calendar implementation.
+// Google backend
+import { defaultGoogleAuthConfig, getAuthedGoogleClient } from "./google/auth.js";
+import { gmailMarkRead, gmailSearch, gmailUnread } from "./google/gmail.js";
+import {
+  calendarCreate,
+  calendarDelete,
+  calendarUpcoming,
+  calendarUpdate,
+} from "./google/calendar.js";
+
+async function withGoogle<T>(fn: (auth: any) => Promise<T>): Promise<T> {
+  const cfg = defaultGoogleAuthConfig();
+  const auth = await getAuthedGoogleClient(cfg);
+  return await fn(auth);
+}
+
 const handlers: Record<string, Handler> = {
   ping: async () => ({ ok: true, ts: Date.now() }),
 
-  "gmail.unread": async () => {
-    throw Object.assign(new Error("Not implemented"), {
-      code: "NOT_IMPLEMENTED",
-    });
+  // Gmail
+  "gmail.unread": async (params: any) => {
+    const max = Number(params?.max ?? 20);
+    return await withGoogle((auth) => gmailUnread(auth, max));
   },
-  "gmail.search": async () => {
-    throw Object.assign(new Error("Not implemented"), {
-      code: "NOT_IMPLEMENTED",
-    });
+  "gmail.search": async (params: any) => {
+    const q = String(params?.q ?? "");
+    const max = Number(params?.max ?? 20);
+    return await withGoogle((auth) => gmailSearch(auth, q, max));
   },
-  "calendar.upcoming": async () => {
-    throw Object.assign(new Error("Not implemented"), {
-      code: "NOT_IMPLEMENTED",
-    });
+  "gmail.markRead": async (params: any) => {
+    const ids = Array.isArray(params?.messageIds) ? params.messageIds : [];
+    return await withGoogle((auth) => gmailMarkRead(auth, ids));
   },
-  "calendar.create": async () => {
-    throw Object.assign(new Error("Not implemented"), {
-      code: "NOT_IMPLEMENTED",
-    });
+
+  // Calendar
+  "calendar.upcoming": async (params: any) => {
+    const hours = Number(params?.hours ?? 72);
+    const tz = String(params?.tz ?? "America/New_York");
+    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    return await withGoogle((auth) => calendarUpcoming(auth, hours, tz, calendarId));
   },
-  "calendar.update": async () => {
-    throw Object.assign(new Error("Not implemented"), {
-      code: "NOT_IMPLEMENTED",
-    });
+  "calendar.create": async (params: any) => {
+    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const event = params?.event;
+    return await withGoogle((auth) => calendarCreate(auth, event, calendarId));
   },
-  "calendar.delete": async () => {
-    throw Object.assign(new Error("Not implemented"), {
-      code: "NOT_IMPLEMENTED",
-    });
+  "calendar.update": async (params: any) => {
+    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const eventId = String(params?.eventId ?? "");
+    const patch = params?.patch;
+    return await withGoogle((auth) => calendarUpdate(auth, eventId, patch, calendarId));
+  },
+  "calendar.delete": async (params: any) => {
+    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const eventId = String(params?.eventId ?? "");
+    return await withGoogle((auth) => calendarDelete(auth, eventId, calendarId));
   },
 };
 

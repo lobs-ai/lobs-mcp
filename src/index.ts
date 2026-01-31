@@ -60,6 +60,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "gmail_mark_read",
+        description: "Mark Gmail messages as read (no send; modifies labels).",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["messageIds"],
+          properties: {
+            messageIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "List of Gmail message IDs",
+            },
+          },
+        },
+      },
+      {
         name: "calendar_upcoming",
         description: "List upcoming events.",
         inputSchema: {
@@ -134,6 +150,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const q = String((args as any)?.q ?? "");
         const max = Number((args as any)?.max ?? 20);
         const result = await bridge.call("gmail.search", { q, max });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+      case "gmail_mark_read": {
+        const messageIds = ((args as any)?.messageIds ?? []) as string[];
+        const result = await bridge.call("gmail.markRead", { messageIds });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       case "calendar_upcoming": {
