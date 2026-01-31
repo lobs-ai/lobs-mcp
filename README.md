@@ -87,24 +87,56 @@ If you want a dead-simple shell way to send one request and block until a respon
 
 This is intentionally “dumb”: it’s for quick manual testing that the bridge is alive and returning the expected shapes.
 
-## Configuration
+## Quickstart (make it work every time)
 
-By default, the tools are **standalone** (no `export ...` needed). Configure once:
+1) Bring up the bridge (socket) reliably:
 
 ```bash
-# default is:
-#   /tmp/gcal-bridge.sock
-# so you can often skip this entirely.
-#
-# If your bridge uses a different socket path, set it once:
-./bin/configure --socket /some/other/path.sock
+cd ~/lobs-mcp
+./bin/up
+```
+
+This ensures:
+- the `gcal-bridge` user service is installed + started
+- `/tmp/gcal-bridge.sock` exists
+
+Logs:
+```bash
+journalctl --user -u gcal-bridge -f
+```
+
+2) Set up Google auth (one time)
+
+Put your OAuth client JSON at:
+- `~/.config/lobs-mcp/google-credentials.json`
+
+Then run:
+```bash
+cd ~/lobs-mcp
+npm run build
+lobs-google-auth
 ```
 
 This writes:
-- `~/.config/lobs-mcp/config.env`
+- `~/.config/lobs-mcp/google-token.json`
+
+Scopes:
+- Calendar: read+write
+- Gmail: read + mark read/unread (NO send)
+
+## Configuration
+
+Defaults:
+- socket: `/tmp/gcal-bridge.sock`
+
+Override (optional):
+- `LOBS_BRIDGE_SOCKET`
+- `LOBS_BRIDGE_TIMEOUT_MS`
+- `GOOGLE_CREDENTIALS_PATH`
+- `GOOGLE_TOKEN_PATH`
 
 Resolution order (highest → lowest priority):
-1) Environment variables (`LOBS_BRIDGE_SOCKET`, `LOBS_BRIDGE_TIMEOUT_MS`)
+1) Environment variables
 2) Repo-local `.env`
 3) `~/.config/lobs-mcp/config.env`
 4) Built-in defaults
