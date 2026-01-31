@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+# Load defaults (repo .env, user config, etc.)
+# shellcheck disable=SC1091
+source "$ROOT_DIR/bin/_env.sh"
+
+SOCKET_PATH="$LOBS_BRIDGE_SOCKET"
+
+ms_now() {
+  date +%s%3N 2>/dev/null || python3 - <<'PY'
+import time
+print(int(time.time()*1000))
+PY
+}
+
+wait_for_socket() {
+  local sock="$1"
+  local timeout_ms="${2:-5000}"
+  local start
+  start=$(ms_now)
+  while true; do
+    if [ -S "$sock" ]; then
+      return 0
+    fi
+    local now
+    now=$(ms_now)
+    if (( now - start >= timeout_ms )); then
+      return 1
+    fi
+    sleep 0.1
+  done
+}
+
+ensure_deps() {
+  if [ ! -x "node_modules/.bin/tsc" ]; then
+    echo "[lobs-up] Installing dependencies..." >&2
+    npm install >&2
+  fi
+}
+
+start_bridge_bg() {
+  if [ -S "$SOCKET_PATH" ]; then
+    echo "[lobs-up] Bridge socket already present: $SOCKET_PATH" >&2
+    return 0
+  fi
+
+  echo "[lobs-up] Starting bridge (gcal-bridge) in background..." >&2
+  # Use debug logs by default so it's obvious what's happening.
+  # Detach using nohup; logs go to .run/gcal-bridge.log
+  mkdir -p "$ROOT_DIR/.run"
+  nohup env \
+    LOBS_BRIDGE_LOG_LEVEL="${LOBS_BRIDGE_LOG_LEVEL:-debug}" \
+    LOBS_BRIDGE_SOCKET_MODE="${LOBS_BRIDGE_SOCKET_MODE:-0666}" \
+    "$ROOT_DIR/bin/start-bridge" \
+    >>"$ROOT_DIR/.run/gcal-bridge.log" 2>&1 < /dev/null &
+}
+
+ensure_deps
+
+# Bridge first (creates the socket)
+start_bridge_bg
+
+if ! wait_for_socket "$SOCKET_PATH" 5000; then
+  echo "[lobs-up] ERROR: bridge socket did not appear: $SOCKET_PATH" >&2
+  echo "[lobs-up] Tail logs: tail -n 200 $ROOT_DIR/.run/gcal-bridge.log" >&2
+  exit 1
+fi
+
+echo "[lobs-up] Bridge ready: $SOCKET_PATH" >&2
+
+# Start MCP server (stdio). In most setups your MCP client spawns this.
+# If you run it manually, this will exec and take over the terminal.
+if [ "${LOBS_UP_NO_MCP:-}" = "1" ]; then
+  echo "[lobs-up] LOBS_UP_NO_MCP=1 set; not starting MCP server." >&2
+  echo "[lobs-up] Bridge is ready at: $SOCKET_PATH" >&2
+  exit 0
+fi
+
+echo "[lobs-up] Starting MCP server (lobs-mcp) over stdio..." >&2
+exec "$ROOT_DIR/bin/start-mcp"
