@@ -5,6 +5,7 @@ import path from "node:path";
 
 import type { BridgeRequest, BridgeResponse } from "./udsClient.js";
 import { loadConfig } from "./config.js";
+import { loadCalendarAcl, requireCalendarPerm } from "./calendarAcl.js";
 
 type Handler = (params: any) => Promise<any> | any;
 
@@ -51,6 +52,7 @@ function parseMode(mode: string | undefined, fallback: number): number {
 const cfg = loadConfig();
 const SOCKET_PATH = cfg.socketPath;
 const SOCKET_MODE = parseMode(process.env.LOBS_BRIDGE_SOCKET_MODE, 0o666);
+const CAL_ACL = loadCalendarAcl();
 
 // Google backend
 import { defaultGoogleAuthConfig, getAuthedGoogleClient } from "./google/auth.js";
@@ -58,6 +60,7 @@ import { gmailMarkRead, gmailSearch, gmailUnread } from "./google/gmail.js";
 import {
   calendarCreate,
   calendarDelete,
+  calendarList,
   calendarUpcoming,
   calendarUpdate,
 } from "./google/calendar.js";
@@ -87,25 +90,33 @@ const handlers: Record<string, Handler> = {
   },
 
   // Calendar
+  "calendar.list": async () => {
+    // List available calendars (always read-level operation)
+    return await withGoogle((auth) => calendarList(auth));
+  },
   "calendar.upcoming": async (params: any) => {
     const hours = Number(params?.hours ?? 72);
     const tz = String(params?.tz ?? "America/New_York");
-    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const calendarId = params?.calendarId ? String(params.calendarId) : "primary";
+    requireCalendarPerm(CAL_ACL, calendarId, "read");
     return await withGoogle((auth) => calendarUpcoming(auth, hours, tz, calendarId));
   },
   "calendar.create": async (params: any) => {
-    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const calendarId = params?.calendarId ? String(params.calendarId) : "primary";
+    requireCalendarPerm(CAL_ACL, calendarId, "write");
     const event = params?.event;
     return await withGoogle((auth) => calendarCreate(auth, event, calendarId));
   },
   "calendar.update": async (params: any) => {
-    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const calendarId = params?.calendarId ? String(params.calendarId) : "primary";
+    requireCalendarPerm(CAL_ACL, calendarId, "write");
     const eventId = String(params?.eventId ?? "");
     const patch = params?.patch;
     return await withGoogle((auth) => calendarUpdate(auth, eventId, patch, calendarId));
   },
   "calendar.delete": async (params: any) => {
-    const calendarId = params?.calendarId ? String(params.calendarId) : undefined;
+    const calendarId = params?.calendarId ? String(params.calendarId) : "primary";
+    requireCalendarPerm(CAL_ACL, calendarId, "write");
     const eventId = String(params?.eventId ?? "");
     return await withGoogle((auth) => calendarDelete(auth, eventId, calendarId));
   },

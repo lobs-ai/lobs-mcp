@@ -121,8 +121,26 @@ This writes:
 - `~/.config/lobs-mcp/google-token.json`
 
 Scopes:
-- Calendar: read+write
+- Calendar: read+write (API scope)
 - Gmail: read + mark read/unread (NO send)
+
+3) Calendar access control (RW vs RO)
+
+The bridge enforces per-calendar permissions via:
+- `~/.config/lobs-mcp/calendar-acl.json`
+
+Example (default read-only; primary writable):
+```json
+{
+  "default": "read",
+  "calendars": {
+    "primary": "write",
+    "someone@group.calendar.google.com": "read"
+  }
+}
+```
+
+To discover calendar IDs, use the new MCP tool `calendar_list` (or bridge method `calendar.list`).
 
 ## Configuration
 

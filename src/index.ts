@@ -76,6 +76,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "calendar_list",
+        description: "List calendars available to the bridge (and their IDs).",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {},
+        },
+      },
+      {
         name: "calendar_upcoming",
         description: "List upcoming events.",
         inputSchema: {
@@ -155,6 +164,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "gmail_mark_read": {
         const messageIds = ((args as any)?.messageIds ?? []) as string[];
         const result = await bridge.call("gmail.markRead", { messageIds });
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      }
+      case "calendar_list": {
+        const result = await bridge.call("calendar.list");
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       }
       case "calendar_upcoming": {

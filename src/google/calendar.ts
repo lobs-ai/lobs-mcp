@@ -1,5 +1,11 @@
 import { google } from "googleapis";
 
+export async function calendarList(auth: any) {
+  const cal = google.calendar({ version: "v3", auth });
+  const res = await cal.calendarList.list({ maxResults: 250 });
+  return res.data.items ?? [];
+}
+
 export async function calendarUpcoming(
   auth: any,
   hours: number,
