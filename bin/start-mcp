@@ -4,12 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-: "${LOBS_BRIDGE_SOCKET:=/run/gcal-bridge/bridge.sock}"
-: "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
-
-export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
-
-export LOBS_BRIDGE_TIMEOUT_MS
+# Load persistent config (no exports needed beforehand)
+# shellcheck disable=SC1091
+source "$ROOT_DIR/bin/_env.sh"
 
 # Ensure deps are installed (tsc lives in node_modules/.bin)
 if [ ! -x "node_modules/.bin/tsc" ]; then

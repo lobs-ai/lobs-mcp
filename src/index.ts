@@ -6,11 +6,10 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { UdsBridgeClient } from "./udsClient.js";
+import { loadConfig } from "./config.js";
 
-const SOCKET_PATH = process.env.LOBS_BRIDGE_SOCKET ?? "/run/gcal-bridge/bridge.sock";
-const TIMEOUT_MS = Number(process.env.LOBS_BRIDGE_TIMEOUT_MS ?? 15_000);
-
-const bridge = new UdsBridgeClient(SOCKET_PATH, TIMEOUT_MS);
+const cfg = loadConfig();
+const bridge = new UdsBridgeClient(cfg.socketPath, cfg.timeoutMs);
 
 const server = new Server(
   {

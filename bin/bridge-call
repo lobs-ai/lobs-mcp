@@ -14,16 +14,21 @@ set -euo pipefail
 METHOD="${1:-}"
 PARAMS_JSON="${2:-}"
 
-export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck disable=SC1091
+source "$ROOT_DIR/bin/_env.sh"
 
 if [[ -z "$METHOD" || "$METHOD" == "-h" || "$METHOD" == "--help" ]]; then
   cat >&2 <<'EOF'
 Usage:
   bridge-call <method> [params-json]
 
-Environment:
-  LOBS_BRIDGE_SOCKET       Path to UDS (default: /run/gcal-bridge/bridge.sock)
-  LOBS_BRIDGE_TIMEOUT_MS   Timeout in ms (default: 15000)
+Config (no exports required):
+  ~/.config/lobs-mcp/config.env
+
+Environment override (optional):
+  LOBS_BRIDGE_SOCKET       Path to UDS
+  LOBS_BRIDGE_TIMEOUT_MS   Timeout in ms
 
 Examples:
   bridge-call ping
@@ -32,9 +37,6 @@ Examples:
 EOF
   exit 2
 fi
-
-: "${LOBS_BRIDGE_SOCKET:=/run/gcal-bridge/bridge.sock}"
-: "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
 
 if ! command -v socat >/dev/null 2>&1; then
   echo "bridge-call requires 'socat' (for Unix socket I/O)." >&2

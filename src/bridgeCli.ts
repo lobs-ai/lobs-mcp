@@ -64,11 +64,11 @@ async function main() {
     process.argv.slice(2),
   );
 
-  const SOCKET_PATH =
-    socketPath ?? process.env.LOBS_BRIDGE_SOCKET ?? "/run/gcal-bridge/bridge.sock";
-  const TIMEOUT_MS = Number(
-    timeoutMs ?? process.env.LOBS_BRIDGE_TIMEOUT_MS ?? 15_000,
-  );
+  const { loadConfig } = await import("./config.js");
+  const cfg = loadConfig();
+
+  const SOCKET_PATH = socketPath ?? cfg.socketPath;
+  const TIMEOUT_MS = Number(timeoutMs ?? cfg.timeoutMs);
 
   const bridge = new UdsBridgeClient(SOCKET_PATH, TIMEOUT_MS);
   const result = await bridge.call(method!, params);

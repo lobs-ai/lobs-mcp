@@ -52,7 +52,6 @@ npm run build
 One command build+run (bash script):
 
 ```bash
-export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
 ./bin/start-mcp
 ```
 
@@ -84,7 +83,6 @@ lobs-bridge calendar.upcoming --params '{"hours":48,"tz":"America/New_York"}'
 If you want a dead-simple shell way to send one request and block until a response:
 
 ```bash
-export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
 ./bin/bridge-call ping
 ./bin/bridge-call gmail.unread '{"max":10}'
 ```
@@ -93,6 +91,20 @@ This is intentionally “dumb”: it’s for quick manual testing that the bridg
 
 ## Configuration
 
-- `LOBS_BRIDGE_SOCKET`: path to the Unix domain socket.
-- `LOBS_BRIDGE_TIMEOUT_MS`: request timeout (default: 15000).
+By default, the tools are **standalone** (no `export ...` needed). Configure once:
+
+```bash
+./bin/configure --socket /run/gcal-bridge/bridge.sock
+# optional:
+# ./bin/configure --socket /run/gcal-bridge/bridge.sock --timeout-ms 15000
+```
+
+This writes:
+- `~/.config/lobs-mcp/config.env`
+
+Resolution order (highest → lowest priority):
+1) Environment variables (`LOBS_BRIDGE_SOCKET`, `LOBS_BRIDGE_TIMEOUT_MS`)
+2) Repo-local `.env`
+3) `~/.config/lobs-mcp/config.env`
+4) Built-in defaults
 
