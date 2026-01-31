@@ -10,6 +10,12 @@ cd "$ROOT_DIR"
 export LOBS_BRIDGE_SOCKET
 export LOBS_BRIDGE_TIMEOUT_MS
 
+# Ensure deps are installed (tsc lives in node_modules/.bin)
+if [ ! -x "node_modules/.bin/tsc" ]; then
+  echo "[lobs-mcp] Installing dependencies..." >&2
+  npm install >&2
+fi
+
 # Build then run MCP server over stdio.
 # (MCP clients spawn this and communicate via stdin/stdout.)
 

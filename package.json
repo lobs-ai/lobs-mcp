@@ -11,7 +11,7 @@
     "lobs-bridge": "dist/bridgeCli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm exec -- tsc -p tsconfig.json",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "lint": "eslint .",
