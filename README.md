@@ -19,7 +19,7 @@ If you add/change a bridge method, you must update:
 
 ## Bridge protocol (UDS)
 
-The bridge is expected to listen on a Unix socket (default: `./.run/bridge.sock` in this repo) and speak **newline-delimited JSON**.
+The bridge is expected to listen on a Unix socket (default: `/tmp/gcal-bridge.sock`) and speak **newline-delimited JSON**.
 
 Request:
 ```json
@@ -92,8 +92,8 @@ This is intentionally “dumb”: it’s for quick manual testing that the bridg
 By default, the tools are **standalone** (no `export ...` needed). Configure once:
 
 ```bash
-# default is repo-local:
-#   /home/rafe/lobs-mcp/.run/bridge.sock
+# default is:
+#   /tmp/gcal-bridge.sock
 # so you can often skip this entirely.
 #
 # If your bridge uses a different socket path, set it once:

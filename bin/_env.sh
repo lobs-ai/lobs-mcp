@@ -8,13 +8,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# shellcheck disable=SC1090
-if [ -f "$ROOT_DIR/.env" ]; then
-  set -a
-  source "$ROOT_DIR/.env"
-  set +a
-fi
-
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lobs-mcp"
 CONF_FILE="$CONF_DIR/config.env"
 # shellcheck disable=SC1090
@@ -24,7 +17,14 @@ if [ -f "$CONF_FILE" ]; then
   set +a
 fi
 
-: "${LOBS_BRIDGE_SOCKET:=$ROOT_DIR/.run/bridge.sock}"
+# shellcheck disable=SC1090
+if [ -f "$ROOT_DIR/.env" ]; then
+  set -a
+  source "$ROOT_DIR/.env"
+  set +a
+fi
+
+: "${LOBS_BRIDGE_SOCKET:=/tmp/gcal-bridge.sock}"
 : "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
 
 export LOBS_BRIDGE_SOCKET
