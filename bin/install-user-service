@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+if ! command -v systemctl >/dev/null 2>&1; then
+  echo "systemctl not found; cannot install user service." >&2
+  exit 1
+fi
+
+SRC="$ROOT_DIR/systemd/gcal-bridge.user.service"
+DST_DIR="$HOME/.config/systemd/user"
+DST="$DST_DIR/gcal-bridge.service"
+
+mkdir -p "$DST_DIR"
+cp "$SRC" "$DST"
+
+systemctl --user daemon-reload
+systemctl --user enable --now gcal-bridge
+
+echo "Installed and started user service: gcal-bridge" >&2
+echo "Logs: journalctl --user -u gcal-bridge -f" >&2

@@ -48,10 +48,31 @@ start_bridge_bg() {
     return 0
   fi
 
-  echo "[lobs-up] Starting bridge (gcal-bridge) in background..." >&2
-  # Use debug logs by default so it's obvious what's happening.
-  # Detach using nohup; logs go to .run/gcal-bridge.log
+  # Remove stale socket (created by a crashed/killed daemon)
+  rm -f "$SOCKET_PATH" 2>/dev/null || true
+
+  echo "[lobs-up] Starting bridge (gcal-bridge) detached..." >&2
   mkdir -p "$ROOT_DIR/.run"
+
+  # Prefer systemd user service if available: survives parent SIGKILL and gives clean logs.
+  if command -v systemctl >/dev/null 2>&1; then
+    if systemctl --user start gcal-bridge >/dev/null 2>&1; then
+      echo "[lobs-up] Started bridge via: systemctl --user start gcal-bridge" >&2
+      return 0
+    fi
+  fi
+
+  # Fallback: hard detach using setsid so the bridge survives when the caller gets SIGKILL.
+  if command -v setsid >/dev/null 2>&1; then
+    setsid -f env \
+      LOBS_BRIDGE_LOG_LEVEL="${LOBS_BRIDGE_LOG_LEVEL:-debug}" \
+      LOBS_BRIDGE_SOCKET_MODE="${LOBS_BRIDGE_SOCKET_MODE:-0666}" \
+      "$ROOT_DIR/bin/start-bridge" \
+      >>"$ROOT_DIR/.run/gcal-bridge.log" 2>&1
+    return 0
+  fi
+
+  # Last resort.
   nohup env \
     LOBS_BRIDGE_LOG_LEVEL="${LOBS_BRIDGE_LOG_LEVEL:-debug}" \
     LOBS_BRIDGE_SOCKET_MODE="${LOBS_BRIDGE_SOCKET_MODE:-0666}" \
