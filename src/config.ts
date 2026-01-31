@@ -3,13 +3,7 @@ import path from "node:path";
 import os from "node:os";
 
 export type LobsConfig = {
-  /** Bridge transport selection. */
-  bridgeTransport: "http" | "uds";
-
-  /** UDS socket path (used when bridgeTransport="uds"). */
-  socketPath: string;
-
-  /** HTTP base URL (used when bridgeTransport="http"). */
+  /** HTTP base URL for the local bridge (bind to 127.0.0.1 for internal-only access). */
   httpUrl: string;
 
   /** Optional bearer token for HTTP bridge. */
@@ -61,12 +55,7 @@ export function loadConfig(): LobsConfig {
     // Default to localhost HTTP to avoid cross-user UDS permission issues.
     "http://127.0.0.1:17381";
 
-  const socketPath =
-    process.env.LOBS_BRIDGE_SOCKET ??
-    repoEnv.LOBS_BRIDGE_SOCKET ??
-    userEnv.LOBS_BRIDGE_SOCKET ??
-    // Default UDS path if you opt into UDS.
-    "/run/lobs-mcp/bridge.sock";
+  // UDS transport removed; HTTP only.
 
   const timeoutMsRaw =
     process.env.LOBS_BRIDGE_TIMEOUT_MS ??
@@ -85,14 +74,5 @@ export function loadConfig(): LobsConfig {
     throw new Error(`Invalid LOBS_BRIDGE_TIMEOUT_MS: ${timeoutMsRaw}`);
   }
 
-  // Prefer explicit env selection; otherwise default to HTTP.
-  const bridgeTransport: LobsConfig["bridgeTransport"] =
-    (process.env.LOBS_BRIDGE_TRANSPORT as any) ??
-    (repoEnv.LOBS_BRIDGE_TRANSPORT as any) ??
-    (userEnv.LOBS_BRIDGE_TRANSPORT as any) ??
-    (process.env.LOBS_BRIDGE_SOCKET || repoEnv.LOBS_BRIDGE_SOCKET || userEnv.LOBS_BRIDGE_SOCKET
-      ? "uds"
-      : "http");
-
-  return { bridgeTransport, socketPath, httpUrl, authToken, timeoutMs };
+  return { httpUrl, authToken, timeoutMs };
 }

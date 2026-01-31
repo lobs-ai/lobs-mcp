@@ -1,6 +1,6 @@
 # lobs-mcp
 
-MCP server that lets **Lobs/OpenClaw** talk to a local **Gmail+Google Calendar bridge** over **localhost HTTP** (default), or optionally a **Unix domain socket**.
+MCP server that lets **Lobs/OpenClaw** talk to a local **Gmail+Google Calendar bridge** over **localhost HTTP** (internal-only).
 
 - Gmail access is **read-only**.
 - Calendar access is **read by default**, with **per-calendar write allowlisting** enforced by the bridge.
@@ -17,16 +17,12 @@ If you add/change a bridge method, you must update:
 - the docs below
 - and (optionally) any local CLI conveniences
 
-## Bridge protocol (HTTP, default)
+## Bridge protocol (HTTP)
 
 The bridge listens on **localhost HTTP** (default: `http://127.0.0.1:17381`) and speaks JSON.
 
 - `GET /health` → `{ ok: true }`
 - `POST /call` with `{ id, method, params }` → `{ id, ok, result | error }`
-
-## Bridge protocol (UDS, optional)
-
-If you opt into UDS, the bridge listens on a Unix socket (default: `/run/lobs-mcp/bridge.sock`) and speaks **newline-delimited JSON**.
 
 Request:
 ```json

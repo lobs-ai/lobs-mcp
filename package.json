@@ -8,7 +8,6 @@
   "main": "dist/index.js",
   "bin": {
     "lobs-mcp": "dist/index.js",
-    "lobs-bridge": "dist/bridgeCli.js",
     "gcal-bridge": "dist/bridgeHost.js",
     "lobs-google-auth": "dist/googleAuthCli.js"
   },

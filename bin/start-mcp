@@ -60,9 +60,8 @@ maybe_start_bridge() {
 
 maybe_start_bridge
 
-if [ "${LOBS_BRIDGE_TRANSPORT:-http}" = "http" ]; then
-  if ! wait_for_http "$LOBS_BRIDGE_HTTP_URL" 5; then
-    cat >&2 <<EOF
+if ! wait_for_http "$LOBS_BRIDGE_HTTP_URL" 5; then
+  cat >&2 <<EOF
 [lobs-mcp] Bridge HTTP not available: $LOBS_BRIDGE_HTTP_URL
 
 Tried:
@@ -72,8 +71,7 @@ Tried:
 Fix:
   - Ensure the bridge daemon is running and listening on that URL.
 EOF
-    exit 1
-  fi
+  exit 1
 fi
 
 npm run -s build

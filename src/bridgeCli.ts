@@ -1,83 +1,10 @@
 #!/usr/bin/env node
-import { UdsBridgeClient } from "./udsClient.js";
+// Deprecated legacy CLI for the old UDS bridge transport.
+// Kept as a stub so existing installs fail loudly rather than silently doing the wrong thing.
+// Use: curl http://127.0.0.1:17381/health (or ./bin/mcp-ping)
 
-function usage(): never {
-  // eslint-disable-next-line no-console
-  console.error(
-    [
-      "Usage:",
-      "  lobs-bridge <method> [--params '<json>'] [--socket <path>] [--timeout-ms <n>]",
-      "",
-      "Examples:",
-      "  lobs-bridge ping",
-      "  lobs-bridge gmail.unread --params '{" + '"max":10' + "}'",
-      "  lobs-bridge calendar.upcoming --params '{" +
-        '"hours":48,"tz":"America/New_York"' +
-        "}'",
-    ].join("\n"),
-  );
-  process.exit(2);
-}
-
-function parseArgs(argv: string[]) {
-  const out: {
-    method?: string;
-    params?: unknown;
-    socketPath?: string;
-    timeoutMs?: number;
-  } = {};
-
-  const args = [...argv];
-  out.method = args.shift();
-  while (args.length) {
-    const a = args.shift();
-    if (!a) break;
-    if (a === "--params") {
-      const json = args.shift();
-      if (!json) usage();
-      out.params = JSON.parse(json);
-      continue;
-    }
-    if (a === "--socket") {
-      out.socketPath = args.shift();
-      if (!out.socketPath) usage();
-      continue;
-    }
-    if (a === "--timeout-ms") {
-      const v = args.shift();
-      if (!v) usage();
-      out.timeoutMs = Number(v);
-      continue;
-    }
-    if (a === "-h" || a === "--help") usage();
-
-    // Unknown arg
-    usage();
-  }
-
-  if (!out.method) usage();
-  return out;
-}
-
-async function main() {
-  const { method, params, socketPath, timeoutMs } = parseArgs(
-    process.argv.slice(2),
-  );
-
-  const { loadConfig } = await import("./config.js");
-  const cfg = loadConfig();
-
-  const SOCKET_PATH = socketPath ?? cfg.socketPath;
-  const TIMEOUT_MS = Number(timeoutMs ?? cfg.timeoutMs);
-
-  const bridge = new UdsBridgeClient(SOCKET_PATH, TIMEOUT_MS);
-  const result = await bridge.call(method!, params);
-  // eslint-disable-next-line no-console
-  console.log(JSON.stringify(result, null, 2));
-}
-
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(err?.stack ?? String(err));
-  process.exit(1);
-});
+// eslint-disable-next-line no-console
+console.error(
+  "lobs-bridge has been removed (UDS transport deprecated). Use the HTTP bridge (/health, /call) or ./bin/mcp-ping.",
+);
+process.exit(2);
