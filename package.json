@@ -9,6 +9,7 @@
   "bin": {
     "lobs-mcp": "dist/index.js",
     "gcal-bridge": "dist/bridgeHost.js",
+    "lobs-bridge": "dist/bridgeHttpCli.js",
     "lobs-google-auth": "dist/googleAuthCli.js"
   },
   "scripts": {

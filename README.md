@@ -70,13 +70,21 @@ npm run dev
 
 ### 1) `lobs-bridge` (Node CLI)
 
-So you don’t have to remember socket paths or write ad-hoc test code, this repo ships a tiny CLI that calls the **bridge** directly:
+A small CLI that calls the **localhost HTTP bridge** directly (so you don’t have to remember URLs or write ad-hoc test code):
 
 ```bash
 # after npm install && npm run build
 lobs-bridge ping
-lobs-bridge gmail.unread --params '{"max":10}'
-lobs-bridge calendar.upcoming --params '{"hours":48,"tz":"America/New_York"}'
+lobs-bridge gmail-unread --max 10
+lobs-bridge gmail-search "is:unread newer_than:7d" --max 20
+lobs-bridge calendar-upcoming --hours 48 --tz "America/New_York"
+lobs-bridge calendar-list
+```
+
+If you need to hit an arbitrary bridge method:
+
+```bash
+lobs-bridge call calendar.upcoming --params-json '{"hours":48,"tz":"America/New_York"}'
 ```
 
 ### 2) `./bin/bridge-call` (bash + socat)
