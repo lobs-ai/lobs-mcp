@@ -152,6 +152,13 @@ To discover calendar IDs, use the new MCP tool `calendar_list` (or bridge method
 Defaults:
 - socket: `/run/lobs-mcp/bridge.sock` (shared runtime; works with a separate bridge user)
 
+### Separate bridge user
+If you run the bridge under another user (e.g. `mpcuser`), the bridge service must be able to read the bridge code (this repo) and the Google credential/token files for that user. The recommended pattern is:
+- Bridge runs as `mpcuser` via **system** systemd service
+- Socket lives at `/run/lobs-mcp/bridge.sock` with group `lobs-mcp` and mode `0660`
+- `rafe` is in group `lobs-mcp` so the MCP server can connect
+
+
 Override (optional):
 - `LOBS_BRIDGE_SOCKET`
 - `LOBS_BRIDGE_TIMEOUT_MS`

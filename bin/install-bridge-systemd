@@ -31,16 +31,9 @@ echo "[lobs-mcp] Adding users to group: $SHARED_GROUP" >&2
 sudo usermod -aG "$SHARED_GROUP" rafe
 sudo usermod -aG "$SHARED_GROUP" "$BRIDGE_USER"
 
-echo "[lobs-mcp] Copying repo to /home/$BRIDGE_USER/lobs-mcp (first-time only)" >&2
-if [ ! -d "/home/$BRIDGE_USER/lobs-mcp" ]; then
-  sudo mkdir -p "/home/$BRIDGE_USER/lobs-mcp"
-  # Copy everything except node_modules/dist to keep it clean for the bridge user.
-  sudo rsync -a --delete \
-    --exclude node_modules \
-    --exclude dist \
-    "$ROOT_DIR/" "/home/$BRIDGE_USER/lobs-mcp/"
-  sudo chown -R "$BRIDGE_USER:$BRIDGE_USER" "/home/$BRIDGE_USER/lobs-mcp"
-fi
+echo "[lobs-mcp] Repo location" >&2
+echo "  This service template expects the bridge code at: /home/rafe/lobs-mcp" >&2
+echo "  Ensure $BRIDGE_USER can read that directory, OR copy the repo elsewhere and update the unit." >&2
 
 echo "[lobs-mcp] Installing systemd unit: $SERVICE_DST" >&2
 sudo install -m 0644 "$SERVICE_SRC" "$SERVICE_DST"
