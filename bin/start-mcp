@@ -17,5 +17,79 @@ fi
 # Build then run MCP server over stdio.
 # (MCP clients spawn this and communicate via stdin/stdout.)
 
+SOCKET_PATH="$LOBS_BRIDGE_SOCKET"
+
+wait_for_socket() {
+  local sock="$1"
+  local timeout_ms="${2:-5000}"
+  local start
+  start=$(date +%s%3N 2>/dev/null || python3 - <<'PY'
+import time
+print(int(time.time()*1000))
+PY
+)
+
+  while true; do
+    if [ -S "$sock" ]; then
+      return 0
+    fi
+    local now
+    now=$(date +%s%3N 2>/dev/null || python3 - <<'PY'
+import time
+print(int(time.time()*1000))
+PY
+)
+    if (( now - start >= timeout_ms )); then
+      return 1
+    fi
+    sleep 0.1
+  done
+}
+
+maybe_start_bridge() {
+  local sock="$1"
+
+  if [ -S "$sock" ]; then
+    return 0
+  fi
+
+  # Try to start a systemd *system* service if available.
+  local unit="${LOBS_BRIDGE_SYSTEMD_UNIT:-gcal-bridge.service}"
+  if command -v systemctl >/dev/null 2>&1; then
+    if sudo -n systemctl start "$unit" >/dev/null 2>&1; then
+      echo "[lobs-mcp] Started bridge via: sudo systemctl start $unit" >&2
+      return 0
+    fi
+  fi
+
+  # Fallback: directly run the bridge as a specific user.
+  local run_as="${LOBS_BRIDGE_RUN_AS:-}"
+  if [ -n "$run_as" ]; then
+    if sudo -n -u "$run_as" "$ROOT_DIR/bin/start-bridge" >/dev/null 2>&1 & then
+      echo "[lobs-mcp] Started bridge via: sudo -u $run_as $ROOT_DIR/bin/start-bridge" >&2
+      return 0
+    fi
+  fi
+
+  return 0
+}
+
+maybe_start_bridge "$SOCKET_PATH"
+
+if ! wait_for_socket "$SOCKET_PATH" 5000; then
+  cat >&2 <<EOF
+[lobs-mcp] Bridge socket not available: $SOCKET_PATH
+
+Tried:
+  - sudo systemctl start ${LOBS_BRIDGE_SYSTEMD_UNIT:-gcal-bridge.service}
+  - sudo -u <user> $ROOT_DIR/bin/start-bridge   (set LOBS_BRIDGE_RUN_AS)
+
+Fix:
+  - Ensure the bridge daemon is running and creates that socket.
+  - Or set LOBS_BRIDGE_RUN_AS to the privileged user.
+EOF
+  exit 1
+fi
+
 npm run -s build
 exec node dist/index.js
