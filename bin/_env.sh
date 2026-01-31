@@ -24,7 +24,7 @@ if [ -f "$ROOT_DIR/.env" ]; then
   set +a
 fi
 
-: "${LOBS_BRIDGE_SOCKET:=$ROOT_DIR/.run/bridge.sock}"
+: "${LOBS_BRIDGE_SOCKET:=/run/lobs-mcp/bridge.sock}"
 : "${LOBS_BRIDGE_TIMEOUT_MS:=15000}"
 
 export LOBS_BRIDGE_SOCKET

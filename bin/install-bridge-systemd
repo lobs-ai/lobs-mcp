@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Installs the systemd *system* service for running the bridge under a separate user.
+# This script is intentionally interactive (sudo will likely prompt).
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SERVICE_SRC="$ROOT_DIR/systemd/gcal-bridge.service"
+SERVICE_DST="/etc/systemd/system/gcal-bridge.service"
+
+BRIDGE_USER="${LOBS_BRIDGE_USER:-mpcuser}"
+SHARED_GROUP="${LOBS_BRIDGE_GROUP:-lobs-mcp}"
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "[lobs-mcp] This installer needs sudo." >&2
+fi
+
+echo "[lobs-mcp] Installing bridge system service:" >&2
+echo "  user:  $BRIDGE_USER" >&2
+echo "  group: $SHARED_GROUP" >&2
+
+echo "[lobs-mcp] Creating group (if needed): $SHARED_GROUP" >&2
+sudo groupadd -f "$SHARED_GROUP"
+
+echo "[lobs-mcp] Creating user (if needed): $BRIDGE_USER" >&2
+if ! id "$BRIDGE_USER" >/dev/null 2>&1; then
+  sudo useradd -m -s /bin/bash "$BRIDGE_USER"
+fi
+
+echo "[lobs-mcp] Adding users to group: $SHARED_GROUP" >&2
+sudo usermod -aG "$SHARED_GROUP" rafe
+sudo usermod -aG "$SHARED_GROUP" "$BRIDGE_USER"
+
+echo "[lobs-mcp] Copying repo to /home/$BRIDGE_USER/lobs-mcp (first-time only)" >&2
+if [ ! -d "/home/$BRIDGE_USER/lobs-mcp" ]; then
+  sudo mkdir -p "/home/$BRIDGE_USER/lobs-mcp"
+  # Copy everything except node_modules/dist to keep it clean for the bridge user.
+  sudo rsync -a --delete \
+    --exclude node_modules \
+    --exclude dist \
+    "$ROOT_DIR/" "/home/$BRIDGE_USER/lobs-mcp/"
+  sudo chown -R "$BRIDGE_USER:$BRIDGE_USER" "/home/$BRIDGE_USER/lobs-mcp"
+fi
+
+echo "[lobs-mcp] Installing systemd unit: $SERVICE_DST" >&2
+sudo install -m 0644 "$SERVICE_SRC" "$SERVICE_DST"
+
+echo "[lobs-mcp] Reloading + enabling service" >&2
+sudo systemctl daemon-reload
+sudo systemctl enable --now gcal-bridge.service
+
+echo "[lobs-mcp] Done." >&2
+
+echo "IMPORTANT:" >&2
+echo "- You must re-login (or restart) for group membership changes to apply to existing shells." >&2
+echo "- Logs: sudo journalctl -u gcal-bridge -f" >&2

@@ -47,8 +47,8 @@ export function loadConfig(): LobsConfig {
     process.env.LOBS_BRIDGE_SOCKET ??
     repoEnv.LOBS_BRIDGE_SOCKET ??
     userEnv.LOBS_BRIDGE_SOCKET ??
-    // Default to a repo-local socket so setup is “automatic” when running from the repo.
-    path.resolve(process.cwd(), ".run", "bridge.sock");
+    // Default to a shared runtime socket so the bridge can run under a separate user.
+    "/run/lobs-mcp/bridge.sock";
 
   const timeoutMsRaw =
     process.env.LOBS_BRIDGE_TIMEOUT_MS ??
