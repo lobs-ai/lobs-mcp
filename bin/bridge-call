@@ -14,6 +14,8 @@ set -euo pipefail
 METHOD="${1:-}"
 PARAMS_JSON="${2:-}"
 
+export LOBS_BRIDGE_SOCKET=/run/gcal-bridge/bridge.sock
+
 if [[ -z "$METHOD" || "$METHOD" == "-h" || "$METHOD" == "--help" ]]; then
   cat >&2 <<'EOF'
 Usage:
